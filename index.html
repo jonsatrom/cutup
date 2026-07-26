@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUT/UP — a Burroughs cut-up machine</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ground: #e6e1d5;
+    --ground-deep: #dcd6c6;
+    --paper: #f7f2e6;
+    --paper-edge: #e9e2d0;
+    --ink: #26221b;
+    --ink-soft: #6b6353;
+    --accent: #b23a2c;
+    --accent-ink: #ffffff;
+    --blue: #3f5e86;
+    --rule: #c9c2af;
+    --shadow: 0 1px 2px rgba(38,34,27,.18), 0 3px 8px rgba(38,34,27,.08);
+    --mono: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
+    --grot: "Helvetica Neue", "Arial Narrow", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #211e19;
+      --ground-deep: #1a1713;
+      --paper: #efe8d8;
+      --paper-edge: #ddd4bf;
+      --ink: #26221b;
+      --ink-soft: #a89e8a;
+      --accent: #c94f3f;
+      --rule: #3d3830;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #e6e1d5; --ground-deep: #dcd6c6; --paper: #f7f2e6; --paper-edge: #e9e2d0;
+    --ink: #26221b; --ink-soft: #6b6353; --accent: #b23a2c; --rule: #c9c2af;
+    --shadow: 0 1px 2px rgba(38,34,27,.18), 0 3px 8px rgba(38,34,27,.08);
+  }
+  :root[data-theme="dark"] {
+    --ground: #211e19; --ground-deep: #1a1713; --paper: #efe8d8; --paper-edge: #ddd4bf;
+    --ink: #26221b; --ink-soft: #a89e8a; --accent: #c94f3f; --rule: #3d3830;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--ground);
+    background-image: radial-gradient(ellipse at 30% 0%, rgba(255,255,255,.06), transparent 60%);
+    color: var(--ink);
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+  body, .panel-label, .opt label, button, .seed-row, .note { color: inherit; }
+
+  header {
+    padding: 2.2rem 2rem 1.4rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 1rem 2rem;
+    color: var(--ink-soft);
+  }
+  :root[data-theme="dark"] header, :root[data-theme="light"] header { color: var(--ink-soft); }
+  .masthead { display: flex; gap: .28rem; align-items: baseline; }
+  .masthead .slip {
+    display: inline-block; background: var(--paper); color: var(--ink);
+    font-family: var(--grot); font-weight: 700; font-size: 1.7rem;
+    padding: .05em .3em; box-shadow: var(--shadow);
+  }
+  .masthead .slip.red { background: var(--accent); color: var(--accent-ink); }
+  .tagline { font-size: .8rem; letter-spacing: .04em; max-width: 34ch; }
+
+  main {
+    display: grid; grid-template-columns: minmax(300px, 440px) 1fr;
+    gap: 0; min-height: calc(100vh - 110px);
+  }
+  @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+
+  .bench { padding: 1.6rem 2rem 3rem; border-right: 1px solid var(--rule); }
+  @media (max-width: 880px) { .bench { border-right: 0; border-bottom: 1px solid var(--rule); } }
+  .table { padding: 1.6rem 2rem 4rem; background: var(--ground-deep); }
+
+  .panel-label {
+    font-family: var(--grot); font-size: .68rem; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft);
+    margin: 1.6rem 0 .55rem;
+  }
+  .panel-label:first-child { margin-top: 0; }
+
+  textarea {
+    width: 100%; background: var(--paper); color: var(--ink);
+    border: 0; box-shadow: var(--shadow);
+    font-family: var(--mono); font-size: .85rem; line-height: 1.55;
+    padding: .9rem 1rem; resize: vertical;
+  }
+  textarea:focus, button:focus-visible, input:focus-visible, .method:focus-within {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  #srcA { min-height: 11rem; }
+  #srcB { min-height: 5.5rem; }
+  #srcB-wrap { display: none; }
+  #srcB-wrap.shown { display: block; }
+
+  .methods { display: grid; gap: .5rem; }
+  .method {
+    display: block; background: var(--paper); box-shadow: var(--shadow);
+    padding: .65rem .8rem; cursor: pointer; color: var(--ink);
+    border-left: 4px solid transparent;
+  }
+  .method input { position: absolute; opacity: 0; }
+  .method.sel { border-left-color: var(--accent); }
+  .method b { font-family: var(--grot); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; }
+  .method small { display: block; font-size: .72rem; color: var(--ink-soft); margin-top: .15rem; line-height: 1.45; }
+  :root[data-theme="dark"] .method small, .method small { color: #6b6353; }
+
+  .opts { display: grid; gap: .8rem; }
+  .opt label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--grot); font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: .25rem;
+  }
+  .opt output { font-family: var(--mono); font-size: .8rem; letter-spacing: 0; text-transform: none; color: inherit; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  .seed-row { display: flex; gap: .5rem; align-items: center; }
+  #seed {
+    width: 7.5rem; font-family: var(--mono); font-size: .85rem;
+    background: var(--paper); color: var(--ink); border: 0; box-shadow: var(--shadow);
+    padding: .45rem .6rem;
+  }
+
+  .actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.6rem; }
+  button {
+    font-family: var(--grot); font-weight: 700; font-size: .74rem;
+    letter-spacing: .14em; text-transform: uppercase;
+    border: 0; cursor: pointer; padding: .7rem 1.1rem;
+    background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
+  button:active { transform: translateY(1px); }
+  @media (prefers-reduced-motion: reduce) {
+    button:active { transform: none; }
+    .strip { transform: none !important; }
+  }
+
+  .table-head { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.2rem; margin-bottom: 1.1rem; }
+  .table-head .panel-label { margin: 0; flex: 1; }
+  .ghost {
+    background: transparent; box-shadow: none; color: var(--ink-soft);
+    border: 1px solid var(--rule); padding: .45rem .8rem;
+  }
+  .ghost[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+  #out { max-width: 72ch; }
+  #out.prose {
+    background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
+    padding: 1.4rem 1.6rem; font-size: .92rem; white-space: pre-wrap;
+  }
+  #out.strips { display: flex; flex-wrap: wrap; gap: .45rem .4rem; align-items: flex-start; }
+  .strip {
+    background: var(--paper); color: var(--ink); box-shadow: var(--shadow);
+    padding: .18rem .55rem .18rem .7rem; font-size: .88rem;
+    position: relative; border-left: 4px solid var(--prov, var(--rule));
+  }
+  .empty { color: var(--ink-soft); font-size: .85rem; max-width: 44ch; }
+  .legend {
+    margin-top: 1.6rem; font-size: .7rem; color: var(--ink-soft);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .legend .bar {
+    width: 90px; height: 8px; flex: none;
+    background: linear-gradient(90deg, #b23a2c, #8a5a52, #3f5e86);
+  }
+  .note { font-size: .72rem; color: var(--ink-soft); margin-top: .5rem; line-height: 1.5; }
+
+  footer {
+    padding: 1.2rem 2rem 2rem; border-top: 1px solid var(--rule);
+    font-size: .75rem; color: var(--ink-soft); font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="masthead" aria-label="CUT/UP">
+    <span class="slip" style="transform:rotate(-2deg)">CU</span><span
+      class="slip red" style="transform:rotate(1.5deg)">T/</span><span
+      class="slip" style="transform:rotate(-1deg)">UP</span>
+  </div>
+  <p class="tagline">A cut-up machine after William S. Burroughs &amp; Brion Gysin, Beat Hotel, Paris, 1959. Paste text. Cut. Shake. Read what leaks out.</p>
+</header>
+
+<main>
+  <section class="bench" aria-label="Source and controls">
+    <h2 class="panel-label">Source text</h2>
+    <textarea id="srcA" spellcheck="false" placeholder="Paste the page to be cut…"></textarea>
+
+    <div id="srcB-wrap">
+      <h2 class="panel-label">Second text (folded in)</h2>
+      <textarea id="srcB" spellcheck="false" placeholder="Optional second page — leave empty to fold the first text into itself…"></textarea>
+    </div>
+
+    <h2 class="panel-label">Method</h2>
+    <div class="methods" role="radiogroup" aria-label="Cut-up method">
+      <label class="method sel"><input type="radio" name="method" value="strips" checked>
+        <b>Strip cut</b>
+        <small>Cut the text into slips of a few words each and rearrange them — the basic scissors-and-paste operation.</small>
+      </label>
+      <label class="method"><input type="radio" name="method" value="foursquare">
+        <b>Four-square page</b>
+        <small>Gysin's original accident: the page sliced into four quadrants with a Stanley blade, the sections rearranged, read straight across the new seams.</small>
+      </label>
+      <label class="method"><input type="radio" name="method" value="foldin">
+        <b>Fold-in</b>
+        <small>Fold one page down the middle and lay it on another, splicing half-lines together — the method of <i>The Ticket That Exploded</i>.</small>
+      </label>
+    </div>
+
+    <h2 class="panel-label">The scissors</h2>
+    <div class="opts">
+      <div class="opt">
+        <label for="cutsize">Cut size <output id="cutsize-v">4 words</output></label>
+        <input type="range" id="cutsize" min="1" max="12" value="4">
+      </div>
+      <div class="opt">
+        <label for="jitter">Ragged edge <output id="jitter-v">± 2</output></label>
+        <input type="range" id="jitter" min="0" max="6" value="2">
+      </div>
+      <div class="opt" id="shake-opt">
+        <label for="shake">Shake radius <output id="shake-v">everywhere</output></label>
+        <input type="range" id="shake" min="0" max="100" value="100">
+      </div>
+      <div class="opt">
+        <label for="passes">Passes <output id="passes-v">1</output></label>
+        <input type="range" id="passes" min="1" max="4" value="1">
+      </div>
+      <div class="opt">
+        <label for="seed">Seed</label>
+        <div class="seed-row">
+          <input id="seed" inputmode="numeric" value="1959">
+          <button type="button" id="reseed" title="New seed">New seed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="primary" id="cut">Cut it up</button>
+      <button type="button" id="shakebtn">Shake again</button>
+    </div>
+    <p class="note">Shake radius limits how far a slip may drift from where it was cut — a low shake keeps fragments near their neighbours, full shake scatters the whole page. Passes feed the result back through the scissors.</p>
+  </section>
+
+  <section class="table" aria-label="Result">
+    <div class="table-head">
+      <h2 class="panel-label">The table</h2>
+      <button type="button" class="ghost" id="view" aria-pressed="true">Slips</button>
+      <button type="button" class="ghost" id="copy">Copy text</button>
+    </div>
+    <div id="out" class="strips" aria-live="polite">
+      <p class="empty">The cut page will land here. Paste a source text and cut it up — “the best writing seems to be done almost by accident.”</p>
+    </div>
+    <p class="legend"><span class="bar" aria-hidden="true"></span> each slip's edge marks where it came from: red, the start of the source — blue, the end.</p>
+  </section>
+</main>
+
+<footer>“When you cut into the present the future leaks out.” — W.S.B.</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // Deterministic PRNG so a seed always reproduces the same cut.
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const outEl = $("out");
+  let slipView = true;
+  let lastChunks = null;
+
+  // Words carry o: their normalized position in the original source (0..1),
+  // which survives every pass so the provenance stripes stay honest.
+  function tokenize(text, oStart, oEnd) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const n = Math.max(words.length - 1, 1);
+    return words.map((t, i) => ({ t, o: oStart + (oEnd - oStart) * (i / n) }));
+  }
+
+  function chunkSizes(total, base, jitter, rng) {
+    const sizes = [];
+    let used = 0;
+    while (used < total) {
+      const j = jitter ? Math.round((rng() * 2 - 1) * jitter) : 0;
+      const s = Math.min(Math.max(1, base + j), total - used);
+      sizes.push(s); used += s;
+    }
+    return sizes;
+  }
+
+  function toChunks(words, base, jitter, rng) {
+    const chunks = [];
+    let at = 0;
+    for (const s of chunkSizes(words.length, base, jitter, rng)) {
+      chunks.push(words.slice(at, at + s)); at += s;
+    }
+    return chunks;
+  }
+
+  // Partial shuffle: each chunk drifts up to `radius` positions from home.
+  function shake(chunks, radius, rng) {
+    return chunks
+      .map((c, i) => ({ c, k: i + (rng() * 2 - 1) * radius }))
+      .sort((a, b) => a.k - b.k)
+      .map((x) => x.c);
+  }
+
+  function stripsCut(words, opts, rng) {
+    const chunks = toChunks(words, opts.cut, opts.jitter, rng);
+    const radius = (opts.shake / 100) * chunks.length;
+    return shake(chunks, radius, rng);
+  }
+
+  // The 1959 four-square: lay the words onto a page, slice it into
+  // quadrants, rearrange the quadrants, read straight across the seams.
+  function fourSquareCut(words, opts, rng) {
+    const half = Math.max(1, opts.cut);         // words per half-line
+    const lineW = half * 2;
+    const lines = [];
+    for (let i = 0; i < words.length; i += lineW) lines.push(words.slice(i, i + lineW));
+    const midRow = Math.ceil(lines.length / 2);
+
+    const quad = (r0, r1, left) =>
+      lines.slice(r0, r1).map((ln) => (left ? ln.slice(0, half) : ln.slice(half)));
+    const q = [quad(0, midRow, true), quad(0, midRow, false),
+               quad(midRow, lines.length, true), quad(midRow, lines.length, false)];
+
+    // Shuffle the four sections (Fisher–Yates on four slips of paper).
+    for (let i = q.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [q[i], q[j]] = [q[j], q[i]];
+    }
+
+    // Tape them back: q0|q1 on top, q2|q3 below; read line by line.
+    const chunks = [];
+    const pair = (L, R) => {
+      const rows = Math.max(L.length, R.length);
+      for (let r = 0; r < rows; r++) {
+        if (L[r] && L[r].length) chunks.push(L[r]);
+        if (R[r] && R[r].length) chunks.push(R[r]);
+      }
+    };
+    pair(q[0], q[1]); pair(q[2], q[3]);
+    return chunks;
+  }
+
+  // Fold-in: half-lines of text A spliced to half-lines of text B.
+  function foldInCut(wordsA, wordsB, opts, rng) {
+    const half = Math.max(1, opts.cut);
+    const lineOf = (ws, i) => ws.slice(i * half * 2, i * half * 2 + half * 2);
+    const rows = Math.ceil(Math.max(wordsA.length, wordsB.length) / (half * 2));
+    const chunks = [];
+    for (let r = 0; r < rows; r++) {
+      const a = lineOf(wordsA, r).slice(0, half);
+      const b = lineOf(wordsB, r).slice(half);
+      if (a.length) chunks.push(a);
+      if (b.length) chunks.push(b);
+    }
+    return chunks;
+  }
+
+  function readOpts() {
+    return {
+      cut: +$("cutsize").value,
+      jitter: +$("jitter").value,
+      shake: +$("shake").value,
+      passes: +$("passes").value,
+    };
+  }
+
+  function run() {
+    const method = document.querySelector('input[name="method"]:checked').value;
+    const opts = readOpts();
+    const seed = parseInt($("seed").value, 10);
+    const rng = mulberry32(Number.isFinite(seed) ? seed : 1959);
+
+    const textA = $("srcA").value.trim();
+    if (!textA) {
+      outEl.className = "strips";
+      outEl.innerHTML = '<p class="empty">Nothing on the table yet — paste a source text first.</p>';
+      lastChunks = null;
+      return;
+    }
+
+    let chunks;
+    if (method === "foldin") {
+      const textB = $("srcB").value.trim();
+      let wordsA, wordsB;
+      if (textB) {
+        wordsA = tokenize(textA, 0, 0.5);      // stripes: A reads red-ish,
+        wordsB = tokenize(textB, 0.5, 1);      // B reads blue-ish.
+      } else {
+        const all = tokenize(textA, 0, 1);     // fold the page onto itself
+        const mid = Math.ceil(all.length / 2);
+        wordsA = all.slice(0, mid); wordsB = all.slice(mid);
+      }
+      chunks = foldInCut(wordsA, wordsB, opts, rng);
+    } else {
+      const words = tokenize(textA, 0, 1);
+      chunks = method === "foursquare"
+        ? fourSquareCut(words, opts, rng)
+        : stripsCut(words, opts, rng);
+    }
+
+    // Further passes: flatten and cut the cut-up again, strip-wise.
+    for (let p = 1; p < opts.passes; p++) {
+      chunks = stripsCut(chunks.flat(), opts, rng);
+    }
+
+    lastChunks = chunks;
+    render();
+  }
+
+  function provColor(o) {
+    // start-of-source red (#b23a2c) → end-of-source blue (#3f5e86)
+    const mix = (a, b) => Math.round(a + (b - a) * o);
+    return "rgb(" + mix(178, 63) + "," + mix(58, 94) + "," + mix(44, 134) + ")";
+  }
+
+  function render() {
+    if (!lastChunks) return;
+    const rot = mulberry32(7);
+    if (slipView) {
+      outEl.className = "strips";
+      outEl.replaceChildren(...lastChunks.map((c) => {
+        const span = document.createElement("span");
+        span.className = "strip";
+        span.textContent = c.map((w) => w.t).join(" ");
+        const o = c.reduce((s, w) => s + w.o, 0) / c.length;
+        span.style.setProperty("--prov", provColor(o));
+        span.style.transform = "rotate(" + ((rot() * 2 - 1) * 1.6).toFixed(2) + "deg)";
+        return span;
+      }));
+    } else {
+      outEl.className = "prose";
+      outEl.textContent = plainText();
+    }
+  }
+
+  function plainText() {
+    return lastChunks ? lastChunks.map((c) => c.map((w) => w.t).join(" ")).join(" ") : "";
+  }
+
+  // --- wiring ---------------------------------------------------------
+  const sliders = [
+    ["cutsize", (v) => v + (v === "1" ? " word" : " words")],
+    ["jitter", (v) => "± " + v],
+    ["shake", (v) => v === "0" ? "in place" : v === "100" ? "everywhere" : v + "%"],
+    ["passes", (v) => v],
+  ];
+  for (const [id, fmt] of sliders) {
+    const el = $(id), out = $(id + "-v");
+    const upd = () => { out.textContent = fmt(el.value); };
+    el.addEventListener("input", upd); upd();
+  }
+
+  for (const radio of document.querySelectorAll('input[name="method"]')) {
+    radio.addEventListener("change", () => {
+      for (const m of document.querySelectorAll(".method"))
+        m.classList.toggle("sel", m.contains(radio) && radio.checked);
+      $("srcB-wrap").classList.toggle("shown", radio.value === "foldin" && radio.checked);
+      $("shake-opt").style.display = radio.value === "strips" ? "" : "none";
+    });
+  }
+
+  $("cut").addEventListener("click", run);
+  $("shakebtn").addEventListener("click", () => {
+    $("seed").value = String(Math.floor(Math.random() * 100000));
+    run();
+  });
+  $("reseed").addEventListener("click", () => {
+    $("seed").value = String(Math.floor(Math.random() * 100000));
+  });
+  $("view").addEventListener("click", (e) => {
+    slipView = !slipView;
+    e.currentTarget.setAttribute("aria-pressed", String(slipView));
+    e.currentTarget.textContent = slipView ? "Slips" : "Prose";
+    render();
+  });
+  $("copy").addEventListener("click", async (e) => {
+    const t = plainText();
+    if (!t) return;
+    try {
+      await navigator.clipboard.writeText(t);
+      e.currentTarget.textContent = "Copied";
+      setTimeout(() => { $("copy").textContent = "Copy text"; }, 1200);
+    } catch { /* clipboard unavailable; leave button as-is */ }
+  });
+})();
+</script>
+</body>
+</html>
