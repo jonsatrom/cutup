@@ -95,9 +95,9 @@
     textarea, #seed { font-size: 1rem; }
   }
   @media (pointer: coarse) {
-    input[type="range"] { height: 30px; }
-    input[type="range"]::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -8px; }
-    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
+    input[type="range"] { height: 40px; }
+    input[type="range"]::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -9px; }
+    input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; }
   }
 
   .panel-label {
@@ -143,6 +143,8 @@
   input[type="range"] {
     -webkit-appearance: none; appearance: none;
     width: 100%; height: 20px; background: transparent; accent-color: var(--accent);
+    /* the drag belongs to the slider, never to page scroll */
+    touch-action: none;
   }
   input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--rule); }
   input[type="range"]::-webkit-slider-thumb {
@@ -280,7 +282,7 @@
       <button type="button" class="primary" id="cut">Cut it up</button>
       <button type="button" id="shakebtn">Shake again</button>
     </div>
-    <p class="note">Shake radius limits how far a slip may drift from where it was cut — a low shake keeps fragments near their neighbours, full shake scatters the whole page. Passes feed the result back through the scissors.</p>
+    <p class="note"><span id="shake-note">Shake radius limits how far a slip may drift from where it was cut — a low shake keeps fragments near their neighbours, full shake scatters the whole page. </span>Passes feed the result back through the scissors.</p>
   </section>
 
   <section class="table" aria-label="Result">
@@ -509,12 +511,44 @@
     el.addEventListener("input", upd); upd();
   }
 
+  // Buttery sliders: on touch, the thumb jumps to the finger and follows it,
+  // instead of demanding a precise landing on the thumb itself.
+  for (const r of document.querySelectorAll('input[type="range"]')) {
+    const setFromX = (e) => {
+      const rect = r.getBoundingClientRect();
+      const pad = 8;                            // half the thumb, roughly
+      const span = Math.max(rect.width - pad * 2, 1);
+      const f = Math.min(Math.max((e.clientX - rect.left - pad) / span, 0), 1);
+      const min = +r.min, max = +r.max, step = +r.step || 1;
+      const v = Math.round((min + f * (max - min)) / step) * step;
+      if (String(v) !== r.value) {
+        r.value = v;
+        r.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    };
+    let active = -1;
+    r.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      active = e.pointerId;
+      setFromX(e);
+      try { r.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
+      r.focus();
+    });
+    r.addEventListener("pointermove", (e) => {
+      if (e.pointerId === active) setFromX(e);
+    });
+    r.addEventListener("pointerup", () => { active = -1; });
+    r.addEventListener("pointercancel", () => { active = -1; });
+  }
+
   for (const radio of document.querySelectorAll('input[name="method"]')) {
     radio.addEventListener("change", () => {
       for (const m of document.querySelectorAll(".method"))
         m.classList.toggle("sel", m.contains(radio) && radio.checked);
       $("srcB-wrap").classList.toggle("shown", radio.value === "foldin" && radio.checked);
-      $("shake-opt").style.display = radio.value === "strips" ? "" : "none";
+      const strips = radio.value === "strips";
+      $("shake-opt").style.display = strips ? "" : "none";
+      $("shake-note").style.display = strips ? "" : "none";
     });
   }
 
