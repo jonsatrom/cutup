@@ -87,6 +87,18 @@
   .bench { padding: 1.6rem 2rem 3rem; border-right: 1px solid var(--rule); }
   @media (max-width: 880px) { .bench { border-right: 0; border-bottom: 1px solid var(--rule); } }
   .table { padding: 1.6rem 2rem 4rem; background: var(--ground-deep); }
+  @media (max-width: 880px) {
+    header { padding: 1.4rem 1.1rem 1.1rem; }
+    .bench { padding: 1.2rem 1.1rem 2rem; }
+    .table { padding: 1.2rem 1.1rem 3rem; }
+    /* 16px stops iOS Safari from zooming in when an input gets focus */
+    textarea, #seed { font-size: 1rem; }
+  }
+  @media (pointer: coarse) {
+    input[type="range"] { height: 30px; }
+    input[type="range"]::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -8px; }
+    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
+  }
 
   .panel-label {
     font-family: var(--grot); font-size: .68rem; font-weight: 700;
@@ -445,6 +457,13 @@
 
     lastChunks = chunks;
     render();
+
+    // On stacked (mobile) layouts the table sits below the fold —
+    // bring the fresh cut into view so the button visibly does something.
+    if (window.matchMedia("(max-width: 880px)").matches) {
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.querySelector(".table").scrollIntoView({ behavior: calm ? "auto" : "smooth" });
+    }
   }
 
   function provColor(o) {
