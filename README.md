@@ -1,6 +1,6 @@
 # CUT/UP
 
-A William S. Burroughs cut-up machine. Paste text. Cut. Shake. Read what leaks out.
+A William S. Burroughs cut-up machine. Paste text. Cut. Shake. Read. Repeat.
 
 A single self-contained `index.html` — no build step, no dependencies. Open it in a browser, or serve the repo statically (`python3 -m http.server`), or point GitHub Pages at it.
 
