@@ -826,7 +826,6 @@
         if (!voiceOn) return;
         const els = slipView ? [...outEl.querySelectorAll(".strip")] : [];
         els.forEach((el, k) => el.classList.toggle("speaking", k === i));
-        if (els[i]) els[i].scrollIntoView({ block: "nearest" });
         // iOS never fires word boundaries — spread the sounds by estimate instead
         fallbackTimer = setTimeout(() => {
           if (sawBoundary || !voiceOn || layerMode === "off") return;
