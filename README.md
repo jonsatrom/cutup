@@ -24,7 +24,7 @@ Three cuts, each drawn from accounts of Burroughs' and Brion Gysin's practice:
 
 The machine can read the cut aloud (browser speech synthesis — no network, no accounts). The voice picker prefers the junkiest robot voices your device has installed (Zarvox, Fred, Albert…). **Speed** and **pitch** set the base delivery; **rust** lets every slip drift in pitch and speed — more rust, more broken machine, and the drift is seeded, so the same seed always breaks the same way.
 
-Beneath the voice, an **underlayer** of synthesized sound: vowels become square-wave tones on a minor pentatonic scale, consonants become filtered noise, pitched by where each slip came from in the source (early text low, late text high), over a low tape-machine drone. Run it per word or per letter, or switch it off. The slip being spoken is highlighted on the table.
+Beneath the voice, an **underlayer** of synthesized sound: vowels become square-wave tones on a minor pentatonic scale, consonants become filtered noise, pitched by where each slip came from in the source (early text low, late text high), over a low tape-machine drone. The underlayer speaks its own foreign prosody: every slip draws a seeded intonation contour (rise, fall, arch, or zigzag), tones warble and glide toward the next word the way speech anticipates, and punctuation is anti-syntax — questions climb an octave, full stops dive, commas hang and wobble. Run it per word or per letter, or switch it off; the **voice level** and **underlayer level** sliders mix the two tracks (the underlayer level responds live, mid-performance). The slip being spoken is highlighted on the table.
 
 ## Reading the table
 
