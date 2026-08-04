@@ -20,6 +20,12 @@ Three cuts, each drawn from accounts of Burroughs' and Brion Gysin's practice:
 - **Passes** — feed the result back through the scissors, up to 4 times.
 - **Seed** — the cut is deterministic: the same seed always reproduces the same page. **Shake again** rolls a fresh seed.
 
+## The voice
+
+The machine can read the cut aloud (browser speech synthesis — no network, no accounts). The voice picker prefers the junkiest robot voices your device has installed (Zarvox, Fred, Albert…). **Speed** and **pitch** set the base delivery; **rust** lets every slip drift in pitch and speed — more rust, more broken machine, and the drift is seeded, so the same seed always breaks the same way.
+
+Beneath the voice, an **underlayer** of synthesized sound: vowels become square-wave tones on a minor pentatonic scale, consonants become filtered noise, pitched by where each slip came from in the source (early text low, late text high), over a low tape-machine drone. Run it per word or per letter, or switch it off. The slip being spoken is highlighted on the table.
+
 ## Reading the table
 
 The result lands as paper slips. Each slip's left edge is tinted by *provenance* — where the fragment came from in the source: red for the start of the text, blue for the end — tracked per word, so it stays honest across multiple passes. Toggle to a plain prose view, or copy the text out.
